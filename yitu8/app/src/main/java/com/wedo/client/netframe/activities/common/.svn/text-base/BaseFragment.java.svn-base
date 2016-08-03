@@ -1,0 +1,205 @@
+package com.weidu.client.supplychain.activities.common;
+
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.util.Log;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Toast;
+
+import com.umeng.analytics.MobclickAgent;
+import com.weidu.client.supplychain.R;
+import com.weidu.client.supplychain.activities.LoginActivity;
+import com.weidu.client.supplychain.activities.MainActivity;
+import com.weidu.client.supplychain.androidext.ChenApplication;
+
+
+public class BaseFragment extends Fragment {
+
+    protected FragmentActivity mActivity;
+
+    protected ChenApplication shenApplication;
+    public MainActivity homeActivity;
+
+    protected static Handler handler = new Handler();
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        mActivity = getActivity();
+        shenApplication = (ChenApplication) mActivity.getApplication();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        MobclickAgent.onPageStart("SplashScreen"); //统计页面
+        MobclickAgent.onResume(mActivity);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        MobclickAgent.onPageEnd("SplashScreen"); //统计页面
+        MobclickAgent.onPause(mActivity);
+    }
+
+
+    private String getPicName(String picUrl) {
+        if (picUrl == null) {
+            return null;
+        }
+        int index = picUrl.lastIndexOf('/');
+        if (index > 0) {
+            return picUrl.substring(index + 1, picUrl.length());
+        }
+        return picUrl;
+    }
+
+    protected void alert(CharSequence message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(mActivity);
+        AlertDialog alertDialog = builder.create();
+        alertDialog.setTitle(getMessageBoxTitle());
+        alertDialog.setMessage(message);
+        String buttonLabel = getString(R.string.app_btn_label_ok);
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, buttonLabel, (Message) null);
+        alertDialog.show();
+    }
+
+    protected ProgressDialog showProgressDialog(int message) {
+        String title = getString(R.string.app_name);
+        String messageString = getString(message);
+        return ProgressDialog.show(getActivity(), title, messageString);
+    }
+
+    //验证是否登录
+    public void isLogin(){
+        if(shenApplication.isLogin()){
+            return;
+        }else{
+            Intent i = new Intent(getActivity(),LoginActivity.class);
+            startActivity(i);
+        }
+    }
+
+    protected void toastLong(String message) {
+        Toast.makeText(mActivity, message, Toast.LENGTH_LONG).show();
+    }
+
+    protected void toastShort(String message) {
+        Toast.makeText(mActivity, message, Toast.LENGTH_SHORT).show();
+    }
+
+    protected String getMessageBoxTitle() {
+        return mActivity.getTitle().toString();
+    }
+
+    protected void setViewGoneBySynchronization(final View... views) {
+        setViewBySynchronization(false, views);
+    }
+
+    protected void setViewVisiableBySynchronization(final View... views) {
+        setViewBySynchronization(true, views);
+    }
+
+    private void setViewBySynchronization(final boolean isShow, final View... views) {
+        if (views == null || views.length == 0) {
+            return;
+        }
+        for (View view : views) {
+            if (view == null) {
+                continue;
+            }
+            int v = view.getVisibility();
+            if (isShow && v == View.VISIBLE) {
+                continue;
+            }
+            if (!isShow && v == View.GONE) {
+                continue;
+            }
+            if (isShow) {
+                view.setVisibility(View.VISIBLE);
+            } else {
+                view.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    /**
+     * 隐藏键盘
+     */
+    public void hiddenBoard(View v) {
+        InputMethodManager imm = (InputMethodManager) mActivity.getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+    }
+
+    protected void sendSms(String content) {
+        Uri smsToUri = Uri.parse("smsto:");
+        Intent intent = new Intent(Intent.ACTION_SENDTO, smsToUri);
+        intent.putExtra("sms_body", content);
+        startActivity(intent);
+    }
+
+    protected void confirm(CharSequence message, OnClickListener onYesButton, OnClickListener onNoButton, String labelOk) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(mActivity);
+        AlertDialog alertDialog = builder.create();
+        alertDialog.setTitle(getMessageBoxTitle());
+        alertDialog.setMessage(message);
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, labelOk, onYesButton);
+        alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, getString(R.string.app_btn_label_canel), onNoButton);
+        alertDialog.show();
+    }
+
+    protected void call() {
+        // 直接拨打电话
+        String workingTime;
+        final String phoneNum;
+        workingTime = getString(R.string.app_working_time);
+        phoneNum = getString(R.string.app_phone);
+
+        confirm(workingTime, new OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phoneNum));
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            }
+        }, null, "拨打");
+    }
+
+    protected String getLogTag() {
+        return getClass().getSimpleName();
+    }
+
+    protected final void logError(String msg, Throwable e) {
+        Log.e(getLogTag(), msg, e);
+    }
+
+    protected final void logError(String msg) {
+        Log.e(getLogTag(), msg);
+    }
+
+    protected final void logWarn(String msg) {
+        Log.w(getLogTag(), msg);
+    }
+
+    protected final void logInfo(String msg) {
+        Log.i(getLogTag(), msg);
+    }
+
+    protected final void logDebug(String msg) {
+        Log.d(getLogTag(), msg);
+    }
+
+
+}

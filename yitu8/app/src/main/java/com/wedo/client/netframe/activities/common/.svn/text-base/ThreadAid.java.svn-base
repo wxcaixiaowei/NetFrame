@@ -1,0 +1,42 @@
+package com.weidu.client.supplychain.activities.common;
+
+import java.util.concurrent.Callable;
+
+import com.weidu.client.supplychain.remote.RemoteManager;
+import com.weidu.client.supplychain.remote.Request;
+import com.weidu.client.supplychain.remote.Response;
+
+
+import android.util.Log;
+
+
+public class ThreadAid implements Callable<Response> {
+	
+	private ThreadListener threadListener;
+
+	private Request request;
+	
+	
+	public ThreadAid(ThreadListener threadListener, Request request) {
+		super();
+		this.threadListener = threadListener;
+		this.request = request;
+	}
+
+	@Override
+	public Response call() throws Exception {
+		Response response = null;
+		try {
+			RemoteManager remoteManager = RemoteManager.getFullFeatureRemoteManager();
+			response = remoteManager.execute(request);
+			return response;
+		} catch (Exception e) {
+			Log.e("ThreadAid", e.getMessage(), e);
+			throw new RuntimeException(e);
+		} finally {
+			threadListener.onPostExecute(response);
+		}
+	}
+
+
+}

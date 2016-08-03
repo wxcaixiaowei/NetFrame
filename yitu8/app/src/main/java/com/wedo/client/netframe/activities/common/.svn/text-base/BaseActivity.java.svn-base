@@ -1,0 +1,372 @@
+package com.weidu.client.supplychain.activities.common;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Toast;
+
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.umeng.analytics.MobclickAgent;
+import com.weidu.client.supplychain.R;
+import com.weidu.client.supplychain.androidext.ChenApplication;
+import com.weidu.client.supplychain.config.Config;
+import com.weidu.client.supplychain.util.StringUtil;
+
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.List;
+
+/**
+ * @author wxc
+ * 
+ * @date 2012-5-29 下午10:36:46
+ */
+public class BaseActivity extends Activity {
+
+	protected ChenApplication shenApplication;
+
+	protected static Drawable defaultImg140;
+	
+	protected static Drawable defaultLargeImage;
+	
+	protected static Drawable point1Drawable;
+	
+	protected static Drawable point2Drawable;
+	
+	protected static Bitmap defaultSmallImage; 
+	
+	protected final Handler handler = new Handler();
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		shenApplication = (ChenApplication) this.getApplication();
+		shenApplication.addActivity(this);
+
+	}
+
+
+	@Override
+	public void onResume() {
+		super.onResume();
+	    MobclickAgent.onPageStart("SplashScreen"); //统计页面
+		MobclickAgent.onResume(this);
+	}
+	
+	@Override
+	public void onPause() {
+		super.onPause();
+	    MobclickAgent.onPageEnd("SplashScreen");
+		MobclickAgent.onPause(this);
+	}
+
+	protected void call() {
+		// 直接拨打电话
+		confirm("客服工作时间, 每日 9:00-21:00", new OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				Intent phoneIntent = new Intent("android.intent.action.CALL", Uri.parse("tel:" + getString(R.string.app_phone)));
+				startActivity(phoneIntent);
+			}
+		}, null, "拨打");
+	}
+	
+	protected String getCompanyCode() {
+		return Config.getConfig().getCompanyCode();
+	}			
+
+	protected ProgressDialog showProgressDialog(int message) {
+		String title = getString(R.string.app_name);
+		String messageString = getString(message);
+		return ProgressDialog.show(this, title, messageString);
+	}
+
+	protected boolean checkIsNull(String content, String note) {
+		if (StringUtil.isBlank(content)) {
+			toastLong(note + "不能为空");
+			return true;
+		}
+		return false;
+	}
+
+	private String getPicName(String picUrl) {
+		if(picUrl == null) {
+			return null;
+		}
+		int index = picUrl.lastIndexOf('/');
+		if(index > 0) {
+			return picUrl.substring(index+1, picUrl.length());
+		}
+		return picUrl;
+	}
+
+	protected String getImageUrl(String url, int width, int height) {
+		if(url == null) {
+			return null;
+		}
+		
+		int index = url.lastIndexOf("/");
+		if(index < 1) {
+			return null;
+		}
+		
+		
+		String size = width + "x" + height;
+		String prefixUrl = url.substring(0, index + 1);
+		String suffixUrl = url.substring(index + 1);
+		/*if(isShop) {
+			return prefixUrl + size + "/" + size + suffixUrl;
+		}*/
+		return prefixUrl.replace("min", size) + size + suffixUrl;
+	} 
+
+	public String getNameByUrl(String url) {
+		if(StringUtil.isEmpty(url)) {
+			return null;
+		}
+		int index = url.lastIndexOf("/");
+		if(index < 1) {
+			return null;
+		}
+		return url.substring(index + 1);
+	}
+	
+	protected void alert(CharSequence message) {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		AlertDialog alertDialog = builder.create();
+		alertDialog.setTitle(getMessageBoxTitle());
+		alertDialog.setMessage(message);
+		String buttonLabel = getString(R.string.app_btn_label_ok);
+		alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, buttonLabel, (Message) null);
+		alertDialog.show();
+	}
+
+	protected void confirm(CharSequence message, OnClickListener onYesButton, OnClickListener onNoButton) {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		AlertDialog alertDialog = builder.create();
+		alertDialog.setTitle(getMessageBoxTitle());
+		alertDialog.setMessage(message);
+		alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.app_btn_label_ok), onYesButton);
+		alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, getString(R.string.app_btn_label_canel), onNoButton);
+		alertDialog.show();
+	}
+	
+	protected void confirm(CharSequence message, OnClickListener onYesButton, OnClickListener onNoButton,String labelOk) {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		AlertDialog alertDialog = builder.create();
+		alertDialog.setTitle(getMessageBoxTitle());
+		alertDialog.setMessage(message);
+		alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, labelOk, onYesButton);
+		alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, getString(R.string.app_btn_label_canel), onNoButton);
+		alertDialog.show();
+	}
+
+	protected String getMessageBoxTitle() {
+		return this.getTitle().toString();
+	}
+
+	protected void toastShort(String message) {
+		Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+	}
+
+	protected void toastShort(int message) {
+		Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+	}
+
+	protected void toastLong(String message) {
+		Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+	}
+
+	protected void toastLong(int message) {
+		Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+	}
+
+	protected String getLogTag() {
+		return getClass().getSimpleName();
+	}
+
+	protected final void logError(String msg, Throwable e) {
+		Log.e(getLogTag(), msg, e);
+	}
+
+	protected final void logError(String msg) {
+		Log.e(getLogTag(), msg);
+	}
+
+	protected final void logWarn(String msg) {
+		Log.w(getLogTag(), msg);
+	}
+
+	protected final void logInfo(String msg) {
+		Log.i(getLogTag(), msg);
+	}
+
+	protected final void logDebug(String msg) {
+		Log.d(getLogTag(), msg);
+	}
+	
+	public void setViewVisible(final View... views) {
+		setView(true, views);
+	}
+
+	public void setViewGone(final View ...views) {
+		setView(false, views);
+	}
+	
+	private void setView(final boolean isShow, final View... views) {
+		if (views == null || views.length == 0) {
+			return;
+		}
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				for (View view : views) {
+					if (view == null) {
+						continue;
+					}
+					int v = view.getVisibility();
+					if (isShow && v == View.VISIBLE) {
+						continue;
+					}
+					if (!isShow && v == View.GONE) {
+						continue;
+					}
+					if (isShow) {
+						view.setVisibility(View.VISIBLE);
+					} else {
+						view.setVisibility(View.GONE);
+					}
+				}
+			}
+		});
+	}
+	
+	public void setViewGoneBySynchronization(final View... views) {
+		setViewBySynchronization(false, views);
+	}
+	
+	public void setViewVisiableBySynchronization(final View... views) {
+		setViewBySynchronization(true, views);
+	}
+	
+	protected void goToScreen() {
+		Intent intent = new Intent(Intent.ACTION_MAIN);
+		intent.addCategory(Intent.CATEGORY_HOME);
+		startActivity(intent);
+		finish();
+	}
+	
+	/**
+	 * 隐藏键盘
+	 */
+	public void hiddenBoard(View v) {
+		InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+		imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+	}
+	
+	private void setViewBySynchronization(final boolean isShow, final View... views) {
+		if (views == null || views.length == 0) {
+			return;
+		}
+		for (View view : views) {
+			if (view == null) {
+				continue;
+			}
+			int v = view.getVisibility();
+			if (isShow && v == View.VISIBLE) {
+				continue;
+			}
+			if (!isShow && v == View.GONE) {
+				continue;
+			}
+			if (isShow) {
+				view.setVisibility(View.VISIBLE);
+			} else {
+				view.setVisibility(View.GONE);
+			}
+		}
+	}
+
+	// 生成QR图
+	protected Bitmap createImage(String text, int QR_WIDTH, int QR_HEIGHT) {
+		try {
+			// 需要引入core包
+			QRCodeWriter writer = new QRCodeWriter();
+
+			if (text == null || "".equals(text) || text.length() < 1) {
+				return null;
+			}
+			// 把输入的文本转为二维码
+			BitMatrix martix = writer.encode(text, BarcodeFormat.QR_CODE, QR_WIDTH, QR_HEIGHT);
+
+			System.out.println("w:" + martix.getWidth() + "h:" + martix.getHeight());
+
+			Hashtable<EncodeHintType, String> hints = new Hashtable<EncodeHintType, String>();
+			hints.put(EncodeHintType.CHARACTER_SET, "utf-8");
+			BitMatrix bitMatrix = new QRCodeWriter().encode(text,
+					BarcodeFormat.QR_CODE, QR_WIDTH, QR_HEIGHT, hints);
+			int[] pixels = new int[QR_WIDTH * QR_HEIGHT];
+			for (int y = 0; y < QR_HEIGHT; y++) {
+				for (int x = 0; x < QR_WIDTH; x++) {
+					if (bitMatrix.get(x, y)) {
+						pixels[y * QR_WIDTH + x] = 0xff000000;
+					} else {
+						pixels[y * QR_WIDTH + x] = 0xffffffff;
+					}
+
+				}
+			}
+
+			Bitmap bitmap = Bitmap.createBitmap(QR_WIDTH, QR_HEIGHT, Bitmap.Config.ARGB_8888);
+
+			bitmap.setPixels(pixels, 0, QR_WIDTH, 0, 0, QR_WIDTH, QR_HEIGHT);
+			return bitmap;
+
+		} catch (WriterException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	public void handleBack(View v) {
+		this.finish();
+	}
+
+	private List<View> getAllChildViews(View view) {
+
+		List<View> allchildren = new ArrayList<View>();
+		if (view instanceof ViewGroup) {
+			ViewGroup vp = (ViewGroup) view;
+			for (int i = 0; i < vp.getChildCount(); i++) {
+				View viewchild = vp.getChildAt(i);
+				allchildren.add(viewchild);
+				allchildren.addAll(getAllChildViews(viewchild));
+			}
+		}
+		return allchildren;
+	}
+
+	public List<View> getAllChildViews() {
+		View view = this.getWindow().getDecorView();
+		return getAllChildViews(view);
+	}
+
+}

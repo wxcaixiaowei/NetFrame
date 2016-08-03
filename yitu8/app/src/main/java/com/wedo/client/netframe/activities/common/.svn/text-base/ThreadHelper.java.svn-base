@@ -1,0 +1,49 @@
+package com.weidu.client.supplychain.activities.common;
+
+import java.util.concurrent.Callable;
+
+import com.weidu.client.supplychain.remote.RemoteManager;
+import com.weidu.client.supplychain.remote.Request;
+import com.weidu.client.supplychain.remote.Response;
+
+
+import android.app.ProgressDialog;
+import android.util.Log;
+
+
+/**
+ * @author peng
+ *
+ */
+public class ThreadHelper implements Callable<Response> {
+	
+	private ProgressDialog progressDialog;
+
+	private Request request;
+	
+	
+	public ThreadHelper(ProgressDialog progressDialog, Request request) {
+		super();
+		this.progressDialog = progressDialog;
+		this.request = request;
+	}
+
+	@Override
+	public Response call() throws Exception {
+		try {
+			RemoteManager remoteManager = RemoteManager.getFullFeatureRemoteManager();
+			Response response = remoteManager.execute(request);
+//			Log.d("response", String.valueOf(response));
+			progressDialog.setProgress(100);
+			Thread.sleep(200);
+			return response;
+		} catch (Exception e) {
+			Log.e("ThreadHelper", e.getMessage(), e);
+			throw new RuntimeException(e);
+		} finally {
+			progressDialog.dismiss();
+		}
+	}
+
+
+}

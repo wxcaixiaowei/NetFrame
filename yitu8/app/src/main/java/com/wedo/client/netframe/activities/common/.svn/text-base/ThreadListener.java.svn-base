@@ -1,0 +1,10 @@
+package com.weidu.client.supplychain.activities.common;
+
+import com.weidu.client.supplychain.remote.Response;
+
+
+
+public interface ThreadListener {
+	
+	void onPostExecute(Response response);
+}
